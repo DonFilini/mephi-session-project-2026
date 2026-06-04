@@ -1,0 +1,2 @@
+usepam yes
+permitrootlogin no

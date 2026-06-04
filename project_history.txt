@@ -1,0 +1,124 @@
+    1  hostnamestl
+    2  hostnamectl
+    3  findmnt /
+    4  nmctl device status
+    5  nmcli device status
+    6  IFACE="enp0s3"
+    7  CON_NAME="Проводное подключение 1"
+    8  STUDENT_ID="370551"
+    9  hostnamectl set-hostname mephi-2026.domain.local
+   10  hostnamectl
+   11  nmcli con mod "$CON_NAME" ipv4.addresses 192.168.0.150/24
+   12  nmcli con mod "$CON_NAME" ipv4.gateway 192.168.0.1
+   13  nmcli con mod "$CON_NAME" ipv4.dns 8.8.8.8
+   14  nmcli con mod "$CON_NAME" ipv4.method manual
+   15  nmcli con mod "$CON_NAME" ipv4.dad-timeout 0
+   16  nmcli con down "$CON_NAME"
+   17  nmcli con up "$CON_NAME"
+   18  ip addr show "$IFACE"
+   19  ip route
+   20  nmcli dev show "$IFACE" | grep DNS
+   21  ping -c 4 8.8.8.8 > /tmp/network_check.txt
+   22  ping -c 4 192.168.0.1 >> /tmp/network_check.txt
+   23  cat /tmp/network_check.txt
+   24  dnf makecache
+   25  dnf install -y nginx tcpdump libcap-ng-utils dnf-plugins-core policycoreutils-python-utils git firewalld
+   26  nginx -v
+   27  tcpdump --version
+   28  which getcap
+   29  which setcap
+   30  cd /tmp
+   31  dnf download tcpdump
+   32  ls -lh /tmp/tcpdump*.rpm
+   33  rpm -Uvh --replacepkgs /tmp/tcpdump*.rpm
+   34  rpm -q tcpdump
+   35  lsblk
+   36  parted /dev/sdb --script mklabel gpt
+   37  parted /dev/sdb --script mkpart primary ext4 0% 100%
+   38  lsblk
+   39  mkfs.ext4 -L MEPHI_DATA /dev/sdb1
+   40  lsblk -f
+   41  mkdir -p /data/mephi-web
+   42  cp /etc/fstab /etc/fstab.bak
+   43  echo 'LABEL=MEPHI_DATA /data/mephi-web ext4 defaults 0 2' >> /etc/fstab
+   44  cat /etc/fstab
+   45  mount -a
+   46  systemctl daemon-reload
+   47  mount -a
+   48  df -h | grep mephi-web
+   49  findmnt /data/mephi-web
+   50  systemctl enable --now nginx
+   51  systemctl status nginx
+   52  systemctl enable --now firewalld
+   53  systemctl status nginx
+   54  firewall-cmd --permanent --add-service=http
+   55  firewall-cmd --reload
+   56  firewall-cmd --list-services
+   57  journalctl -u nginx --since "5 minutes ago" > /tmp/nginx_recent_logs.txt
+   58  cat /tmp/nginx_recent_logs.txt
+   59  useradd mephi-admin
+   60  echo '1234' | passwd --stdin mephi-admin
+   61  echo '12341234' | passwd --stdin mephi-admin
+   62  echo 'P@ssw0rd2026' | passwd --stdin mephi-admin
+   63  groupadd mephi-devs
+   64  usermod -aG mephi-devs mephi-admin
+   65  chown mephi-admin:mephi-devs /data/mephi-web
+   66  chmod 2775 /data/mephi-web
+   67  ls -ld /data/mephi-web
+   68  id mephi-admin
+   69  getent group mephi-devs
+   70  getenforce
+   71  semanage fcontext -a -t httpd_sys_content_t "/data/mephi-web(/.*)?"
+   72  restorecon -Rv /data/mephi-web
+   73  ls -Zd /data/mephi-web
+   74  cat > /etc/nginx/conf.d/mephi.conf <<'EOF'
+server {
+    listen 80;
+    server_name localhost 192.168.0.150 192.168.1.100;
+
+    root /data/mephi-web;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+EOF
+
+   75  nginx -t
+   76  systemctl restart nginx
+   77  systemctl status nginx
+   78  chmod u-s /usr/sbin/tcpdump
+   79  setcap cap_net_raw,cap_net_admin+ep /usr/sbin/tcpdump
+   80  getcap /usr/sbin/tcpdump
+   81  mephi-admin tcpdump --help
+   82  sudo -u mephi-admin tcpdump --help
+   83  echo root > /etc/ssh/denied_users
+   84  chmod 600 /etc/ssh/denied_users
+   85  chown root:root /etc/ssh/denied_users
+   86  cp /etc/pam.d/sshd /etc/pam.d/sshd.bak
+   87  cp /etc/pam.d/login /etc/pam.d/login.bak
+   88  cp /etc/pam.d/su /etc/pam.d/su.bak
+   89  sed -i '1iauth required pam_listfile.so item=user sense=deny file=/etc/ssh/denied_users onerr=succeed' /etc/pam.d/sshd
+   90  sed -i '1iauth required pam_listfile.so item=user sense=deny file=/etc/ssh/denied_users onerr=succeed' /etc/pam.d/login
+   91  sed -i '1iauth required pam_listfile.so item=user sense=deny file=/etc/ssh/denied_users onerr=succeed' /etc/pam.d/su
+   92  mkdir -p /etc/ssh/sshd_config.d
+   93  echo 'UsePAM yes' > /etc/ssh/sshd_config.d/usepam.conf
+   94  echo 'PermitRootLogin no' > /etc/ssh/sshd_config.d/disable-root-login.conf
+   95  systemctl restart sshd
+   96  passwd -l root
+   97  grep pam_listfile /etc/pam.d/sshd
+   98  grep pam_listfile /etc/pam.d/login
+   99  grep pam_listfile /etc/pam.d/su
+  100  sshd -T | grep -E 'usepam|permitrootlogin'
+  101  passwd -S root
+  102  sudo -u mephi-admin bash -c "echo 'Hello from Student: $STUDENT_ID' > /data/mephi-web/index.html"
+  103  restorecon -Rv /data/mephi-web
+  104  cat /data/mephi-web/index.html
+  105  ls -l /data/mephi-web/index.html
+  106  ls -Z /data/mephi-web/index.html
+  107  curl http://localhost
+  108  curl http://192.168.0.150
+  109  mkdir -p ~/mephi-session-project-2026
+  110  cd ~/mephi-session-project-2026
+  111  history > ~/mephi-session-project-2026/project_history.txt
